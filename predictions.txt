@@ -1,0 +1,2 @@
+Count the blocks in main.tf. How many resources do you expect the first plan to add? (Is the data block one of them?)
+    I expect there to be at least 3 resources. I don't think the data block is one of them

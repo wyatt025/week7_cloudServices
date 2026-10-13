@@ -1,0 +1,23 @@
+# OpenTofu / Terraform working files and state
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+
+# Credentials - never commit these
+clouds.yaml
+secure.yaml
+*openrc*
+*.pem
+
+# Common OpenSSH private-key filenames (public .pub files are not ignored)
+id_rsa
+id_dsa
+id_ecdsa
+id_ed25519
+id_ecdsa_sk
+id_ed25519_sk
+
+# Personal values (your IP address etc.)
+terraform.tfvars
+*.auto.tfvars
