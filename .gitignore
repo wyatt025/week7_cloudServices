@@ -21,3 +21,4 @@ id_ed25519_sk
 # Personal values (your IP address etc.)
 terraform.tfvars
 *.auto.tfvars
+

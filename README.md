@@ -1,3 +1,6 @@
+vm link: http://86.50.22.125
+
+
 # cPouta Web Server
 
 This OpenTofu configuration creates an Ubuntu VM on cPouta, installs Apache, and serves a custom web page.

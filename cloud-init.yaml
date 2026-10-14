@@ -2,77 +2,23 @@
 package_update: true
 packages:
   - apache2
+  - git
 
 write_files:
   - path: /var/www/html/index.html
     owner: root:root
     permissions: '0644'
-    content: |
-      <!doctype html>
-      <html lang="en">
-      <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <title>${student_name} | OpenStack VM</title>
-        <style>
-          :root {
-            color-scheme: light;
-            font-family: Georgia, "Times New Roman", serif;
-            background: #f4f1e8;
-            color: #20352f;
-          }
-          * { box-sizing: border-box; }
-          body {
-            min-height: 100vh;
-            margin: 0;
-            display: grid;
-            place-items: center;
-            padding: 2rem;
-            background: linear-gradient(135deg, #e6eee7 0%, #f4f1e8 58%, #e9d9c4 100%);
-          }
-          main {
-            width: min(100%, 760px);
-            padding: clamp(2rem, 7vw, 5rem);
-            border-left: 8px solid #c45d3e;
-            background: rgba(255, 255, 255, 0.78);
-            box-shadow: 0 24px 70px rgba(32, 53, 47, 0.12);
-          }
-          .eyebrow {
-            margin: 0 0 1.5rem;
-            color: #55766a;
-            font: 700 0.8rem/1.4 Arial, sans-serif;
-            text-transform: uppercase;
-          }
-          h1 {
-            margin: 0;
-            font-size: clamp(2.5rem, 7vw, 5rem);
-            line-height: 1;
-          }
-          .message {
-            max-width: 36rem;
-            margin: 1.5rem 0 0;
-            font-size: 1.25rem;
-            line-height: 1.6;
-          }
-          footer {
-            margin-top: 3rem;
-            padding-top: 1rem;
-            border-top: 1px solid #d7ddd4;
-            color: #55766a;
-            font: 0.9rem/1.5 Arial, sans-serif;
-          }
-        </style>
-      </head>
-      <body>
-        <main>
-          <p class="eyebrow">A small server, running in the cloud</p>
-          <h1>${student_name}</h1>
-          <p class="message">${page_message}</p>
-          <footer>Served by Apache on OpenStack</footer>
-        </main>
-      </body>
-      </html>
+    encoding: b64
+    content: ${index_html_b64}
+  - path: /var/www/html/styles.css
+    owner: root:root
+    permissions: '0644'
+    encoding: b64
+    content: ${styles_css_b64}
 
 runcmd:
+  - [git, clone, --depth, "1", --branch, main, "https://github.com/wyatt025/week7_cloudServices.git", /tmp/week7-report]
+  - [install, -d, -m, "0755", /var/www/html/screenshots]
+  - [cp, -a, "/tmp/week7-report/screenshots/.", /var/www/html/screenshots]
   - [systemctl, enable, apache2]
   - [systemctl, restart, apache2]

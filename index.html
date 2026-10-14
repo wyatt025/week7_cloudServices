@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Week 7</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+    <main>
+        <section class="deployment-banner" aria-label="VM deployment details">
+            <h1>Prepared by ${student_name}</h1>
+            <p>${page_message}</p>
+        </section>
+
+        <section id="project-overview">
+            <h2>Project files and resources</h2>
+            <h3>Files</h3>
+            <dl>
+                <dt><code>main.tf</code></dt>
+                <dd>Defines the cPouta network lookup, security group and rules, network port, VM, key pair, and floating IP.</dd>
+                <dt><code>variables.tf</code></dt>
+                <dd>Declares the typed inputs and validates the SSH source CIDR.</dd>
+                <dt><code>terraform.tfvars.example</code> and <code>terraform.tfvars</code></dt>
+                <dd>The example shows required settings; the local tfvars file supplies this deployment's values and is ignored by Git.</dd>
+                <dt><code>versions.tf</code> and <code>.terraform.lock.hcl</code></dt>
+                <dd>Set the required OpenTofu/provider versions and lock the selected provider version. The OpenStack provider reads credentials from local <code>clouds.yaml</code>, which must not be committed.</dd>
+                <dt><code>cloud-init.yaml</code></dt>
+                <dd>Runs at the VM's first boot, installs Apache, and currently writes a simple homepage using the student name and page message variables.</dd>
+                <dt><code>outputs.tf</code></dt>
+                <dd>Prints the VM's floating IP and browser-ready HTTP URL after apply.</dd>
+            </dl>
+            <h3>Resources and connections</h3>
+            <ul>
+                <li><code>data.openstack_networking_network_v2.project</code> looks up the existing project network; it is a data source, not a resource created by this configuration.</li>
+                <li><code>openstack_compute_keypair_v2.web</code> registers the public SSH key. The VM refers to this key pair.</li>
+                <li><code>openstack_networking_secgroup_v2.web</code> creates the firewall. Its SSH, HTTP, and HTTPS rule resources each refer to the security group's ID.</li>
+                <li><code>openstack_networking_port_v2.web</code> connects the VM to the looked-up project network and attaches the security group.</li>
+                <li><code>openstack_compute_instance_v2.web</code> uses the configured image and flavor, the key pair, and the network port. It also receives <code>cloud-init.yaml</code> as user data.</li>
+                <li><code>openstack_networking_floatingip_v2.web</code> allocates a public IP and attaches it to the network port; the outputs read its address.</li>
+            </ul>
+            <p>These references form OpenTofu's dependency graph: the VM and floating IP use the port; the port and firewall rules use the security group; the VM also uses the key pair. The initial plan had seven resources; the HTTPS rule was added later, so the current configuration defines eight.</p>
+        </section>
+
+        <section id="answers">
+            <h2>Answers to Questions 2–5</h2>
+            <h3>Answer 2</h3>
+            <p class="answer">Declarative automation describes the desired end state, and the tool determines which actions are needed to reach it. Imperative automation specifies the steps to run in order. An operation is idempotent when repeating it with the same inputs leaves the system in the same intended state. This matters because a deployment can be safely rerun to correct or confirm the result without duplicating resources.</p>
+            <h3>Answer 3</h3>
+            <p class="answer">OpenTofu was created as a community fork after HashiCorp changed Terraform's license from the Mozilla Public License to the Business Source License in 2023. OpenTofu remains open source under the MPL and is developed as a community project. Both tools use HCL and share much of the Terraform provider ecosystem, but their roadmaps and some features can differ. For an individual, the choice may have little effect if the needed providers and workflows are supported; for a company, licensing, governance, support, and long-term compatibility can make the choice important.</p>
+            <h3>Answer 4</h3>
+            <p class="answer">The state file records how resources in the configuration correspond to real infrastructure, including resource IDs and attributes OpenTofu needs when it plans changes. It should not be committed to Git because it can contain sensitive values and because concurrent edits can corrupt or conflict with the state. Teams commonly store state in a secured remote backend with access controls, encryption, locking, and backups.</p>
+            <h3>Answer 5</h3>
+            <p class="answer">Configuration drift is a difference between the infrastructure OpenTofu expects and the real infrastructure. It can happen when someone makes a manual change in the cloud console or another process changes a managed resource outside OpenTofu. During a plan, OpenTofu refreshes information about managed resources from the provider and compares it with the configuration and state, then reports actions needed to reconcile detected differences.</p>
+        </section>
+
+        <section id="deployment">
+            <h2>Initial deployment evidence</h2>
+            <p>The first plan created seven resources. The existing project network was looked up as a data source; it was not created by this configuration.</p>
+            <div class="gallery">
+                <figure><img src="screenshots/1stRunPlan1.png" alt="Initial plan showing the OpenStack compute instance to be created"><figcaption>Initial plan: compute instance.</figcaption></figure>
+                <figure><img src="screenshots/1stRunPlan2.png" alt="Initial plan showing the OpenStack key pair to be created"><figcaption>Initial plan: key pair.</figcaption></figure>
+                <figure><img src="screenshots/1stRunPlan3.png" alt="Initial plan showing the floating IP to be created"><figcaption>Initial plan: floating IP.</figcaption></figure>
+                <figure><img src="screenshots/1stRunPlan4.png" alt="Initial plan showing the VM network port to be created"><figcaption>Initial plan: network port.</figcaption></figure>
+                <figure><img src="screenshots/1stRunPlan5.png" alt="Initial plan showing the HTTP security-group rule to be created"><figcaption>Initial plan: HTTP rule.</figcaption></figure>
+                <figure><img src="screenshots/1stRunPlan6.png" alt="Initial plan showing the SSH security-group rule to be created"><figcaption>Initial plan: SSH rule.</figcaption></figure>
+                <figure><img src="screenshots/1stRunPlan7.png" alt="Initial plan showing the security group to be created"><figcaption>Initial plan: security group.</figcaption></figure>
+                <figure><img src="screenshots/1stRunPlan8.png" alt="Initial plan summary showing seven resources to add"><figcaption>Initial plan summary: 7 to add, 0 to change, 0 to destroy.</figcaption></figure>
+            </div>
+            <h3>Initial apply</h3>
+            <figure class="wide-figure"><img src="screenshots/firstApply.png" alt="Successful initial apply with web IP and URL outputs"><figcaption>Apply completed successfully and printed the web server outputs.</figcaption></figure>
+            <figure class="wide-figure"><img src="screenshots/Browser%20at%20the%20floating%20IP.png" alt="Browser address bar showing the server's HTTP floating IP"><figcaption>Browser opened at the server's HTTP floating IP.</figcaption></figure>
+        </section>
+
+        <section id="experiment-1">
+            <h2>Experiment 1 — Change</h2>
+
+            <article class="option">
+                <h3>Option A — change the page text: Change page_message in terraform.tfvars.</h3>
+                <p class="instruction">My Prediction(s)</p>
+                <dl>
+                    <dt>Will the VM be updated in place, or destroyed and re-created? Why?.</dt>
+                    <dd>I think it will just update in place. there is no destory command issued, just a small change.</dd>
+                    <dt>Will the public IP address change after apply?</dt>
+                    <dd>I don't think it will.</dd>
+                </dl>
+
+                <h4>Documentation</h4>
+                <p class="answer"><strong>Which attribute in the plan caused the result you saw? Find the line in the plan output that says so.</strong><br>
+                    The plan marks the <code>user_data</code> change with <code># forces replacement</code>. The summary says <code>1 to add, 0 to change, 1 to destroy</code>, and the VM is shown with <code>-/+</code>, so OpenTofu will replace it. So my initial prediction of no destruction, was incorrect.</p>
+                <p class="answer"><strong>Why can't that attribute simply be changed on a running VM? (Think about when cloud-init runs.)</strong><br>
+                    <code>user_data</code> is provided when the VM is created. Cloud-init reads it during the VM's first boot, so changing it does not rerun cloud-init on an existing VM. Replacing the VM lets it boot with the new page message.</p>
+                <p class="answer"><strong>Why did the IP address behave the way it did? Which resource is the floating IP actually attached to?</strong><br>
+                    The plan does not replace the network port or floating-IP resource, so the public IP should remain the same. In <code>main.tf</code>, the floating IP's <code>port_id</code> references <code>openstack_networking_port_v2.web</code>; it is attached to the port, not directly to the VM.</p>
+
+                <div class="evidence">
+                    <h4>Plan</h4>
+                    <div class="gallery">
+                        <figure><img src="screenshots/optionAPlan1.png" alt="Option A plan marking the compute instance for replacement"><figcaption>The compute instance must be replaced.</figcaption></figure>
+                        <figure><img src="screenshots/optionAPlan2.png" alt="Option A plan showing the user_data attribute forces replacement"><figcaption>The <code>user_data</code> change forces replacement.</figcaption></figure>
+                        <figure><img src="screenshots/optionAPlan3.png" alt="Option A plan summary showing one resource added and one destroyed"><figcaption>Plan summary: 1 to add, 0 to change, 1 to destroy.</figcaption></figure>
+                    </div>
+                    <h4>Result</h4>
+                    <figure class="wide-figure"><img src="screenshots/optionAResult.png" alt="Web page showing the updated page message"><figcaption>The page displays the new message after apply.</figcaption></figure>
+                </div>
+            </article>
+
+            <article class="option">
+                <h3>Option B — allow HTTPS too: Change the code so that the security group also allows HTTPS (TCP 443) from anywhere.</h3>
+                <p class="instruction">My Prediction(s)</p>
+                <dl>
+                    <dt>How many resources will be added, changed and destroyed?</dt>
+                    <dd>There will be 1 addition.</dd>
+                    <dt>Is the VM affected?</dt>
+                    <dd>Yes it is.</dd>
+                </dl>
+
+                <h4>Documentation</h4>
+                <p class="answer"><strong>How does the result differ from Option A, and why?</strong><br>
+                    Unlike Option A, this change adds one security-group rule for inbound TCP port 443; it does not change or replace the VM so, I was wrong about the VM being affected. The HTTPS rule is a separate resource, while Option A changed <code>user_data</code>, which forces the VM to be replaced.</p>
+                <p class="answer"><strong>Does the page now work over https://? Why or why not?</strong><br>
+                    No. Opening port 443 in the security group only allows the network traffic through. Apache is still configured to serve the page over HTTP and has no HTTPS/TLS listener or certificate, so the browser cannot establish an HTTPS connection.</p>
+
+                <div class="evidence">
+                    <h4>Plan</h4>
+                    <div class="gallery">
+                        <figure><img src="screenshots/optionBPlan1.png" alt="Option B plan showing the HTTPS security-group rule will be created"><figcaption>The TCP 443 security-group rule will be created.</figcaption></figure>
+                        <figure><img src="screenshots/optionBPlan2.png" alt="Option B plan summary showing one resource added"><figcaption>Plan summary: 1 to add, 0 to change, 0 to destroy.</figcaption></figure>
+                    </div>
+                    <h4>Result</h4>
+                    <figure class="wide-figure"><img src="screenshots/optionBResult.png" alt="cPouta security-group rule showing ingress TCP 443 from anywhere"><figcaption>The security group permits ingress TCP 443 from <code>0.0.0.0/0</code>. This alone does not configure HTTPS in Apache.</figcaption></figure>
+                </div>
+            </article>
+        </section>
+
+        <section id="experiment-2">
+            <h2>Experiment 2 — Drift</h2>
+            <h3>Part 1 — a deleted rule</h3>
+            <p>In the web interface, go to Network → Security Groups → week7-web-sg → Manage Rules and delete the HTTP (port 80) rule.</p>
+            <p>Reload your page in a private or incognito window. It should stop loading.</p>
+            <p class="instruction">My Prediction(s)</p>
+            <p class="answer"><strong>What will tofu plan show now? Will it notice the missing rule at all?</strong><br>
+                It will show that there is a resource to add. I think it will notice.</p>
+            <div class="gallery evidence">
+                <figure><img src="screenshots/driftpt1.png" alt="Drift plan showing the deleted HTTP security-group rule will be created"><figcaption>Plan detects the deleted, configuration-managed HTTP rule.</figcaption></figure>
+                <figure><img src="screenshots/driftpt1.1.png" alt="Drift plan summary showing one resource to add"><figcaption>Plan summary for the missing rule.</figcaption></figure>
+            </div>
+
+            <h3>Part 2 — an added rule</h3>
+            <p>In the web interface, add a rule by hand to the same security group.</p>
+            <p class="instruction">My Prediction(s)</p>
+            <p class="answer"><strong>Will tofu plan notice this rule and propose to remove it?</strong><br>
+                It most likely will not notice, as all it is looking for are if the recourses from main are missing.</p>
+            <figure class="wide-figure evidence"><img src="screenshots/driftpt2.png" alt="OpenTofu plan reporting no changes after a rule was added manually"><figcaption>The plan reports no changes for the manually added rule.</figcaption></figure>
+
+            <h3>Documentation</h3>
+            <p class="answer"><strong>Why did OpenTofu react differently to the deleted rule and to the added rule? Think about what OpenTofu keeps track of in its state file</strong><br>
+                The deleted HTTP rule was declared in the configuration and recorded in OpenTofu's state. During refresh, OpenTofu found that the real rule was missing, so it planned to create it again. The rule I added manually was not declared in the configuration or recorded in state, so OpenTofu did not treat it as a resource it needed to remove.</p>
+            <p class="answer"><strong>What does this tell you about making manual changes in an environment that is managed with IaC?</strong><br>
+                Changes to resources managed by IaC should be made in the configuration and applied through OpenTofu. Manual changes can create drift; extra resources that are not managed may be left behind because OpenTofu does not necessarily know they should be removed.</p>
+        </section>
+
+        <section id="experiment-3">
+            <h2>Experiment 3 — Destroy and Re-create</h2>
+            <p class="instruction">My Prediction(s)</p>
+            <dl>
+                <dt>How many resources will tofu destroy remove? Will it touch the project network?</dt>
+                <dd>I thik maybe 3-4 resources will be removed. It will not touch the network</dd>
+                <dt>In which order will the resources be destroyed? Use the references in main.tf to reason about it.</dt>
+                <dd>it will be the network ports then the vm.</dd>
+                <dt>After re-creating, will the public IP be the same as before?</dt>
+                <dd>Im fairly confident it will be.</dd>
+            </dl>
+
+            <h3>Documentation</h3>
+            <p class="answer"><strong>Compare the actual destroy order with your prediction. What determined it?</strong><br>
+                My prediction that the port would be destroyed before the VM was incorrect. OpenTofu began destroying the floating IP, security-group rules, and VM in parallel. After the VM finished, it destroyed the key pair and port; the security group was destroyed last. The order came from the dependency graph: dependent resources must be removed before the resources they rely on, while independent resources can be destroyed in parallel.</p>
+            <p class="answer"><strong>why did the project network survive the destroy?</strong><br>
+                The project network is declared as a data source, not a resource managed by this configuration. OpenTofu looks it up so the VM can use it, but it does not own or destroy that existing cPouta network.</p>
+            <p class="answer"><strong>Why does a changing IP address matter less when you have an output for it — and what would you need if the address had to stay the same?</strong><br>
+                The <code>web_public_ip</code> and <code>web_url</code> outputs show the current address after each apply, so I can find the server even if its address changes. The floating IP is allocated dynamically from the <code>public</code> pool, so destroying and recreating it does not guarantee the same address. To keep a stable address, I would need to reserve a specific floating IP and preserve that allocation instead of destroying it.</p>
+            <p class="answer"><strong>How long did the rebuild take compared to your manual setup in Week 1?</strong><br>
+                It was much faster overall.</p>
+
+            <div class="evidence">
+                <h3>Destroy and re-apply evidence</h3>
+                <figure class="wide-figure"><img src="screenshots/destroy.png" alt="OpenTofu destroy output showing eight resources destroyed"><figcaption>Destroy completed; the configuration-managed resources were removed.</figcaption></figure>
+                <figure class="wide-figure"><img src="screenshots/re%20apply1.png" alt="OpenTofu re-apply output showing eight resources created and the current outputs"><figcaption>Re-apply recreated the resources and printed the new outputs.</figcaption></figure>
+                <figure class="wide-figure"><img src="screenshots/re%20apply2.png" alt="Browser address bar showing the re-created server's HTTP floating IP"><figcaption>The re-created server was opened at its new HTTP floating IP.</figcaption></figure>
+            </div>
+        </section>
+
+        <section id="reflection">
+            <h2>Reflection</h2>
+            <!-- compare building the server by hand (Week 1) and from code (this week) — effort, repeatability, security, and when each approach makes sense. -->
+            <p class="answer">Building the VM by hand helped me understand the individual setup steps, but rebuilding it with OpenTofu was much faster. Keeping the network, security rules, VM, and outputs in code makes the deployment repeatable and easier to review. The experiments also showed that changes such as updating cloud-init user data can replace a VM, while manual changes to managed resources create drift. I would use manual setup for learning or one-off troubleshooting, and OpenTofu when I need a consistent deployment I can recreate.</p>
+        </section>
+
+        <section id="problems">
+            <h2>Problems encountered</h2>
+            <p class="note">Google was trolling me again by auto updating the http to https when I was attempting to view my live site.</p>
+        </section>
+    </main>
+
+    <footer>Week 7 cPouta VM exercise · OpenTofu</footer>
+</body>
+</html>
